@@ -8,19 +8,14 @@ public class FollowPlayer : MonoBehaviour {
     private Vector2 currentVelocity = Vector2.zero;
     public float smoothTime = 0.05f, maxSpeed = 20, velocity = 0.0F;
     public float zPosition = -17F;
-
+    public float maxX = 0.0f, maxY = 0.0f;
+    public Vector3 stageDimensions = Vector3.zero;
     // Use this for initialization
     void Start () {
         player = GameObject.FindGameObjectWithTag("Player").transform;
-	}
+        stageDimensions = Camera.main.ScreenToWorldPoint(new Vector3(Screen.width, Screen.height, 0));
+    }
     
-    /*void LateUpdate()
-    {
-            //transform.position = Vector2.SmoothDamp(transform.position, player.position, ref currentVelocity, smoothTime);//new Vector2(player.position.x, player.position.y);
-            
-            Vector2 newPosition = Vector2.SmoothDamp(transform.position, player.position, ref currentVelocity, smoothTime, maxSpeed, Time.deltaTime);
-            transform.position = new Vector3(newPosition.x, newPosition.y, transform.position.z);
-    }*/ 
     
     void Update()
     {

@@ -12,10 +12,15 @@ public class LedgesScript : MonoBehaviour {
         {
             children.Add(child);
         }
-	}
-	
-	// Update is called once per frame
-	void Update () {
-		
+        float posX = 0.5f * children[0].localScale.x;
+        float posY = 0.5f * children[0].localScale.y;
+
+        children[1].localPosition = new Vector2(posX, posY);
+        children[2].localPosition = new Vector2(-posX, posY);
+    }
+
+    // Update is called once per frame
+    void Update () {
+
 	}
 }

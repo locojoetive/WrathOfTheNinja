@@ -18,7 +18,7 @@ public class NinjaMove : MonoBehaviour {
     public Transform groundCheckBack;
     public Transform wallCheckUp;
     public Transform wallCheckDown;
-    public Transform wallCheckMid;
+    public Transform squeezeCheck;
     public Transform landingCheck;
     public Transform ledgeCheck;
     private float boxSize = 0.005f;
@@ -31,9 +31,10 @@ public class NinjaMove : MonoBehaviour {
     public float walkingSpeed = 5F, runningSpeed=0.0f, jumpHeight=3F, climbingSpeed=1.5f, slidingSpeed=5F;
     private bool grounded = false, running = false, ducking = false, walking = true, wallGrab = false;
     private bool paused = false, climbing = false, controls = true, sliding = false;
-    public bool walled = false, walledUp = false, walledDown = false, walledMid = false, gF = false, gB = false, onLedge = false, slipping = false, landing = false, onWall = false;
+    public bool walled = false, walledUp = false, walledDown = false, squeezed= false, gF = false, gB = false, onLedge = false, slipping = false, landing = false, onWall = false;
 
     //Extended Movement
+    private float duckingMeasurement = 0.0f;
 
     //Jump
     private float tapTime = 0.2f, lastTap = 0.0f, jumpTime = 0.0f, jumpTimeFrame = 0.2f;
@@ -58,6 +59,8 @@ public class NinjaMove : MonoBehaviour {
         startScaleX = transform.localScale.x;
         startScaleY = transform.localScale.y;
         A = startScaleX * startScaleY;*/
+        
+        duckingMeasurement = col.offset.y + 0.5f *col.size.y;
     }
 
     // Update is called once per frame
@@ -84,9 +87,9 @@ public class NinjaMove : MonoBehaviour {
         groundCheckBack.localPosition = new Vector2(col.offset.x - 0.25f * col.size.x, col.offset.y -0.5f * col.size.y);
         wallCheckUp.localPosition = new Vector2(col.offset.x + 0.5f * col.size.x, col.offset.y + 0.25f * col.size.y);
         wallCheckDown.localPosition = new Vector2(col.offset.x + 0.5f * col.size.x, col.offset.y - 0.25f * col.size.y);
-        wallCheckMid.localPosition = new Vector2(col.offset.x + 0.5f * col.size.x, col.offset.y);
+        squeezeCheck.localPosition = new Vector2(col.offset.x, duckingMeasurement); //for staying duck, if no space
 
-        ledgeCheck.localPosition = new Vector2(col.offset.x + 0.5f * col.size.x, col.offset.y + 0.125f * col.size.y);
+        ledgeCheck.localPosition = new Vector2(col.offset.x + 0.5f * col.size.x, col.offset.y + 0.375f * col.size.y);
         landingCheck.localPosition = new Vector2(col.offset.x + 0.5f * col.size.x + 0.5f * boxSize, col.offset.y - 0.25f * col.size.y);
     }
 
@@ -101,18 +104,18 @@ public class NinjaMove : MonoBehaviour {
         grounded = gF && gB;
 
         //climbing
-        walledUp = Physics2D.OverlapBox(wallCheckUp.position, new Vector2(boxSize, 0.5f * col.size.y - 0.015f), 0.0f, whatIsGround.value);
+        walledUp = Physics2D.OverlapBox(ledgeCheck.position, new Vector2(boxSize, 0.25f * col.size.y), 0.0f, whatIsGround.value);
         walledDown = Physics2D.OverlapBox(wallCheckDown.position, new Vector2(boxSize, 0.5f * col.size.y - 0.015f), 0.0f, whatIsGround.value);
-        walledMid = Physics2D.OverlapBox(wallCheckMid.position, new Vector2(boxSize, 0.5f * col.size.y), 0.0f, whatIsGround.value);
+        squeezed = Physics2D.OverlapBox(squeezeCheck.position, new Vector2(col.size.x - 0.1f, boxSize), 0.0f, whatIsGround.value);
         walled = walledUp && walledDown;
         onLedge = Physics2D.OverlapBox(ledgeCheck.position, new Vector2(boxSize, 0.25f * col.size.y), 0.0f, whatIsLedge.value) && !grounded;
-        onWall = walled && !grounded;
+        onWall = walled && !grounded && !onLedge;
         
         //decides wether player can control rigidbody
         controls = !onLedge
             && !(!walledUp && walledDown && !grounded) && !(walledUp && !walledDown && !grounded); //nicht an Kanten verkeilen
 
-        ducking = grounded && vertical < -0.5f;
+        ducking = grounded && (vertical < -0.5f || squeezed);
 
         landing = gF && !gB && !walledDown && !walledUp;
         slipping = !gF && gB && !walledDown;
@@ -178,7 +181,6 @@ public class NinjaMove : MonoBehaviour {
         if (onLedge &&  vertical > 0)
         {
             rb.velocity = Vector2.up * radix;
-            Debug.Log("I'm ledge!");
         }
         else if (onWall && !onLedge)
         {
