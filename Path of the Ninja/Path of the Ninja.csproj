@@ -297,9 +297,10 @@
     <Compile Include="Assets\_Scripts\AdjustNinjaQuad.cs" />
     <Compile Include="Assets\_Scripts\FollowPlayer.cs" />
     <Compile Include="Assets\_Scripts\LazyTime.cs" />
+    <Compile Include="Assets\_Scripts\LedgesScript.cs" />
+    <Compile Include="Assets\_Scripts\NinjaAttacks.cs" />
     <Compile Include="Assets\_Scripts\NinjaMove.cs" />
     <Compile Include="Assets\_Scripts\UFDMoveScriptwoAnimator.cs" />
-    <Compile Include="Assets\LedgesScript.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <Target Name="GenerateTargetFrameworkMonikerAttribute" />

@@ -17,7 +17,7 @@ public class FollowPlayer : MonoBehaviour {
     }
     
     
-    void Update()
+    void FixedUpdate()
     {
         float interpolation = maxSpeed * Time.deltaTime;
 
