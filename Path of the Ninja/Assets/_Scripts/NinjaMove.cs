@@ -3,8 +3,8 @@ using System.Collections.Generic;
 using UnityEngine;
 
 public class NinjaMove : MonoBehaviour {
-    private bool facingRight = true;
     public Vector3 velocity;
+
     //Unity Components
     private Rigidbody2D rb;
     private Transform tr;
@@ -23,30 +23,35 @@ public class NinjaMove : MonoBehaviour {
     public Transform landingCheck;
     public Transform ledgeCheck;
     private float boxSize = 0.005f;
-    private float slidingTime =0.0f;
-    public float translation;
+
 
     //Movement
+    private bool gF = false, gB = false, grounded = false, facingRight = true;
     private int combo = 0;
-    public float horizontal, vertical;
-    private float walkingSpeed = 5F, runningSpeed = 0.0f, jumpHeight = 3F,
-        climbingSpeed = 1.5f;
+    private float horizontal, vertical;
+    private float walkingSpeed = 5F, jumpHeight = 4F;
+
+    //landing & slipping
+    private float translation = 5.0f;
+    private bool slipping = false, landing = false;
+
+    //climbing
+    public float climbingSpeed = 5F;
+    public bool walled = false, wallGrab = false, walledUp = false, walledDown = false, climbing = false, 
+        onLedge = false, wallJumping = false;
 
     //Sliding Attributes
+    public float slidingSpeed = 6F;
 
-    public float slideBeginningSpeed = 0.0f, slidingSpeed = 1.5f, slidingTimeFrame = 0.0f;
-
-
-    public float x = 0.0f, ms = 1F, wallJumpStart = 0.0f, wallJumpFrame = 0.25f, wallJumpEnd = 0.0f, wallJumpHeight = 2.75f, radix = 10F;
-
-    private bool grounded = false, running = false, ducking = false, walking = true;
-    public bool paused = false, climbing = false, controlHorizontal = true, controlVertical = true, sliding = false;
-    public bool walled = false, walledUp = false, walledDown = false, squeezed= false, gF = false, gB = false, 
-        onLedge = false, slipping = false, landing = false, wallGrab = false, wallJumping = false;
-
+    //walljump
+    private float x = 0.0f;
+    public float  wallJumpSpeed = 10.0f, wallJumpFrame = 0.25f, wallJumpEnd = 0.0f, wallJumpHeight = 2.75f;
+    
     //Extended Movement
     private float duckingMeasurement = 0.0f;
-    public bool wedged = false;
+    private bool wedged = false, squeezed = false;
+    private bool ducking = false;
+    private bool paused = false, controlHorizontal = true, controlVertical = true;
 
     //Jump
     private float tapTime = 0.2f, lastTap = 0.0f, jumpTime = 0.0f, jumpTimeFrame = 0.2f;
@@ -58,7 +63,6 @@ public class NinjaMove : MonoBehaviour {
     {
         if (onLedge)
         {
-            slidingTime = 0.0f;
             rb.velocity = Vector2.zero;
             if (vertical > 0)
             {
@@ -67,20 +71,19 @@ public class NinjaMove : MonoBehaviour {
         }
         else if (climbing)
         {
-            slidingTime = 0.0f;
             rb.velocity = new Vector2(0.0f, climbingSpeed * vertical);
+        } else if (walled && !grounded && rb.velocity.y < -slidingSpeed) {
+            rb.velocity = new Vector2(0.0f, -slidingSpeed);
         }
-        else if (wallGrab)
-        {
-            if (slidingTime == 0.0f) slideBeginningSpeed = rb.velocity.y;
-            float speed = - linearDecrease(slidingTime, slidingSpeed, slideBeginningSpeed, slidingTimeFrame);
-            slidingTime += Time.deltaTime;
-            rb.velocity = new Vector2(0.0f, speed);
-        }
-        else
-            slidingTime = 0.0f;
     }
 
+
+    public float convergeLinearly(float FROM, float TO, float UNTIL)
+    {
+        x = FROM;
+
+        return 0.0f;
+    }
 
     // Use this for initialization
     void Start()
@@ -159,7 +162,7 @@ public class NinjaMove : MonoBehaviour {
 
         //decides wether player can control rigidbody
         //nicht an Kanten verkeilen
-        controlHorizontal = !wallJumping && !((walledDown && !walledUp) || (!walledDown && walledUp));
+        controlHorizontal = !wallJumping && !(!grounded && ((walledDown && !walledUp) || (!walledDown && walledUp)));
         controlVertical = !(onLedge);
 
 
@@ -170,13 +173,12 @@ public class NinjaMove : MonoBehaviour {
 
 
         //wall behaviour
-        wallGrab = !(rb.velocity.y > 0.0f && vertical < 0.01f) && walled && !gF;
-        climbing = wallGrab && vertical > 0.1f;
-        sliding = wallGrab && !climbing;
+        climbing = walled && vertical > 0.1f;
+        wallGrab = walled && rb.velocity.y < 0.01f;
+        //sliding = walled && !grounded && rb.velocity.y < 0.0f && !climbing;
     }
 
-    public float maxSpeed;
-
+    
     private void HandleMovement()
     {
         if (controlHorizontal && !walled)
@@ -243,34 +245,41 @@ public class NinjaMove : MonoBehaviour {
         }
     }
 
+    public float linearShift(float time, float timeLimit, float beginning, float end)
+    {
+        float result = (timeLimit - time) * beginning + time*end;
+        return result;
+    }
+
     public void HandleWallJump()
     {
         if (!wallJumping)
         {
-            wallJumpStart = Time.time;
-            wallJumpEnd = wallJumpStart + wallJumpFrame;
+            wallJumpEnd = Time.time + wallJumpFrame;
             wallJumping = true;
             controlHorizontal = false;
 
-            transform.Translate(-0.1f * transform.right);
+           // transform.Translate(-0.1f * transform.right);
             TurnDirection();
 
-            wallJumpDir = 2F * transform.right;
+            wallJumpDir = wallJumpSpeed * transform.right;
             wallJumpDir = facingRight ? wallJumpDir : -wallJumpDir;
+            wallJumpDir += Vector2.up * wallJumpHeight;
             rb.velocity = Vector2.zero;
             rb.AddForce(wallJumpDir, ForceMode2D.Impulse);
             x = 0.0f;
-        }
+        }/*
         else
         {
             x += Time.deltaTime;
-            float y = wallJumpHeight * Mathf.Sin(wallJumpFrame * Mathf.PI * 0.5f * x);
-            float hSpeed = 2F * walkingSpeed * (wallJumpFrame - x) / wallJumpFrame + horizontal * x / wallJumpFrame;
             float actualSpeed = horizontal * walkingSpeed;
-
+            float hSpeed = rb.velocity.x; //linearShift(x, wallJumpFrame, rb.velocity.x, walkingSpeed*horizontal);
             hSpeed = facingRight ? Mathf.Max(hSpeed, actualSpeed) : Mathf.Min(-hSpeed, actualSpeed);
-            rb.velocity = new Vector2(hSpeed, wallJumpHeight - y);
-        }
+
+            float vSpeed = rb.velocity.y;//(x, 0.0f, wallJumpHeight, wallJumpFrame); //wallJumpHeight * Mathf.Sin(wallJumpFrame * Mathf.PI * 0.5f * x);
+            
+            rb.velocity = new Vector2(hSpeed, vSpeed);
+        }*/
     }
 
     public float maxSS= 1F;
@@ -389,9 +398,9 @@ public class NinjaMove : MonoBehaviour {
     private void HandleAnimation()
     {
         anim.SetBool("grounded", grounded);
-        anim.SetFloat("horizontal", controlHorizontal? Mathf.Abs(horizontal): 0.0f);
-        anim.SetBool("walled", walled);
-        anim.SetBool("onWall", wallGrab || sliding || onLedge);
+        anim.SetFloat("horizontal", Mathf.Abs(horizontal));
+        anim.SetFloat("vertical", vertical);
+        anim.SetBool("onWall", !grounded && (wallGrab || climbing));
         anim.SetBool("climbing", climbing);
         anim.SetBool("ducking", ducking);
         anim.SetBool("onLedge", onLedge);
