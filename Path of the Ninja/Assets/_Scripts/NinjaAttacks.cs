@@ -4,7 +4,6 @@ using UnityEngine;
 
 public class NinjaAttacks : MonoBehaviour
 {
-
     private BoxCollider2D attackCol;
     private Animator anim;
     public Transform shurikenSpawn;

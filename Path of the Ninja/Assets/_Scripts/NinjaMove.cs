@@ -8,7 +8,7 @@ public class NinjaMove : MonoBehaviour {
     //Unity Components
     private Rigidbody2D rb;
     private Transform tr;
-    private BoxCollider2D col;
+    private CapsuleCollider2D col;
     private Animator anim;
     private NinjaAttacks ninjaAttack;
     
@@ -26,7 +26,7 @@ public class NinjaMove : MonoBehaviour {
 
 
     //Movement
-    private bool gF = false, gB = false, grounded = false, facingRight = true;
+    private bool gF = false, gB = false, grounded = false, facingRight = false;
     private int combo = 0;
     private float horizontal, vertical;
     private float walkingSpeed = 5F, jumpHeight = 4F;
@@ -91,7 +91,7 @@ public class NinjaMove : MonoBehaviour {
         //components for manupilation
         rb = GetComponent<Rigidbody2D>();
         tr = GetComponent<Transform>();
-        col = GetComponent<BoxCollider2D>();
+        col = GetComponent<CapsuleCollider2D>();
         anim = GetComponent<Animator>();
         ninjaAttack = GetComponent<NinjaAttacks>();
 

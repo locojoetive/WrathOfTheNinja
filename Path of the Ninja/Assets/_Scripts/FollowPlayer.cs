@@ -22,17 +22,11 @@ public class FollowPlayer : MonoBehaviour {
         
         topRightEdgeVector = Camera.main.ViewportToWorldPoint(new Vector2(1, 1));
         bounds = GameObject.FindGameObjectWithTag("bgLayer0").GetComponent<SpriteRenderer>().sprite.bounds;
-
-        Debug.Log("Cameraborder: " + cameraBounds);
-        Debug.Log("Sprites: " + bounds);
     }
     
     
     void FixedUpdate()
     {
-        Debug.Log("Cameraborder: " + topRightEdgeVector);
-        Debug.Log("Sprites: " + bounds);
-
         float interpolation = maxSpeed * Time.deltaTime;
 
         Vector3 position = this.transform.position;
@@ -40,14 +34,11 @@ public class FollowPlayer : MonoBehaviour {
         position.x = Mathf.Lerp(this.transform.position.x, player.position.x, interpolation);
 
 
-
         float left = -bounds.extents.x + topRightEdgeVector.x;
         float right = bounds.extents.x - topRightEdgeVector.x;
 
         float bottom = -bounds.extents.y + topRightEdgeVector.y;
         float up = bounds.extents.y - topRightEdgeVector.y;
-
-        Debug.Log("Left Border " + left);
 
         if (position.x < left) position.x = left;
         else if (position.x > right) position.x = right;

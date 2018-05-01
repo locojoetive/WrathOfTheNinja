@@ -300,7 +300,10 @@
     <Compile Include="Assets\_Scripts\LedgesScript.cs" />
     <Compile Include="Assets\_Scripts\NinjaAttacks.cs" />
     <Compile Include="Assets\_Scripts\NinjaMove.cs" />
+    <Compile Include="Assets\_Scripts\SecurityWatchScript.cs" />
     <Compile Include="Assets\_Scripts\UFDMoveScriptwoAnimator.cs" />
+    <Compile Include="Assets\SecurityCameraMovement.cs" />
+    <Compile Include="Assets\TriggerDoor.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <Target Name="GenerateTargetFrameworkMonikerAttribute" />
