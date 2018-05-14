@@ -13,8 +13,12 @@ public class NinjaMove : MonoBehaviour {
     private NinjaAttacks ninjaAttack;
     
     //Floor & Hit Detection
-    private LayerMask whatIsGround;
-    private LayerMask whatIsLedge;
+    private int whatIsGround = 0, whatIsLedge = 0, whatIsClimbableLeft = 0, whatIsClimbableRight = 0, whatIsPermeable = 0;
+
+    private float collisionIgnoreFrame = 1.0f, revertCollisionIgnoreAt = 0.0f;
+    private bool collisionIgnored = false;
+    Collider2D floor;
+
     public Transform groundCheckFront;
     public Transform groundCheckBack;
     public Transform wallCheckUp;
@@ -26,10 +30,10 @@ public class NinjaMove : MonoBehaviour {
 
 
     //Movement
-    private bool gF = false, gB = false, grounded = false, facingRight = false;
+    private bool gF = false, gB = false, grounded = false, facingRight = true;
     private int combo = 0;
     private float horizontal, vertical;
-    private float walkingSpeed = 5F, jumpHeight = 4F;
+    public float walkingSpeed = 5F, jumpHeight = 4F;
 
     //landing & slipping
     private float translation = 5.0f;
@@ -88,6 +92,7 @@ public class NinjaMove : MonoBehaviour {
     // Use this for initialization
     void Start()
     {
+        floor = null;
         //components for manupilation
         rb = GetComponent<Rigidbody2D>();
         tr = GetComponent<Transform>();
@@ -97,14 +102,15 @@ public class NinjaMove : MonoBehaviour {
 
         //Time.timeScale = 0.25f;
         //initialize ground tags & sensors positions
-        whatIsGround.value = 1 << 8;
-        whatIsLedge.value = 2 << 8;
+        whatIsGround = 1 << 8;
+        whatIsLedge = whatIsGround << 1;
+        whatIsClimbableLeft = whatIsLedge << 1;
+        whatIsClimbableRight = whatIsClimbableLeft << 1;
+        whatIsPermeable = whatIsClimbableRight << 1;
         /*//initialize consistent player size
         startScaleX = transform.localScale.x;
         startScaleY = transform.localScale.y;
         A = startScaleX * startScaleY;*/
-        
-        duckingMeasurement = col.offset.y + 0.5f *col.size.y;
     }
 
     // Update is called once per frame
@@ -118,7 +124,6 @@ public class NinjaMove : MonoBehaviour {
         velocity = rb.velocity;
         HandleSensors();
         HandleState();
-
         HandleClimbing();
         changeFacing();
         HandleMovement();
@@ -131,7 +136,7 @@ public class NinjaMove : MonoBehaviour {
         groundCheckBack.localPosition = new Vector2(col.offset.x - 0.25f * col.size.x, col.offset.y -0.5f * col.size.y);
         wallCheckUp.localPosition = new Vector2(col.offset.x + 0.5f * col.size.x, col.offset.y + 0.25f * col.size.y);
         wallCheckDown.localPosition = new Vector2(col.offset.x + 0.5f * col.size.x, col.offset.y - 0.25f * col.size.y);
-        squeezeCheck.localPosition = new Vector2(col.offset.x, duckingMeasurement); //for staying duck, if no space
+        squeezeCheck.localPosition = new Vector2(col.offset.x, col.offset.y + 0.5f * col.size.y); //for staying duck, if no space
 
         ledgeCheck.localPosition = new Vector2(col.offset.x + 0.5f * col.size.x, col.offset.y + 0.5f * col.size.y - 0.5f * boxSize);
         landingCheck.localPosition = new Vector2(col.offset.x + 0.5f * col.size.x, col.offset.y - 0.5f * col.size.y);
@@ -143,18 +148,26 @@ public class NinjaMove : MonoBehaviour {
         vertical = Input.GetAxis("Vertical");
 
         //get active sensors
-        gF = Physics2D.OverlapBox(groundCheckFront.position, new Vector2(0.5f * col.size.x - 0.015f, boxSize), 0.0f, whatIsGround.value);
-        gB = Physics2D.OverlapBox(groundCheckBack.position, new Vector2(0.5f * col.size.x - 0.015f, boxSize), 0.0f, whatIsGround.value);
-        grounded = gF && gB;
+        gF = Physics2D.OverlapBox(groundCheckFront.position, new Vector2(0.5f * col.size.x - 0.015f, boxSize), 0.0f, whatIsGround | whatIsPermeable);
+        gB = Physics2D.OverlapBox(groundCheckBack.position, new Vector2(0.5f * col.size.x - 0.015f, boxSize), 0.0f, whatIsGround | whatIsPermeable);
+        grounded = gF && gB && rb.velocity.y < 0.1f;
 
         //climbing
-        onLedge = !grounded && Physics2D.OverlapBox(ledgeCheck.position, new Vector2(boxSize, boxSize), 0.0f, whatIsLedge.value);
-        walledUp = !onLedge && Physics2D.OverlapBox(ledgeCheck.position, new Vector2(boxSize, boxSize), 0.0f, whatIsGround.value);
-        walledDown = Physics2D.OverlapBox(wallCheckDown.position, new Vector2(boxSize, 0.5f * col.size.y - 0.015f), 0.0f, whatIsGround.value);
-        squeezed = Physics2D.OverlapBox(squeezeCheck.position, new Vector2(col.size.x - 0.1f, boxSize), 0.0f, whatIsGround.value);
+        
+        onLedge = !grounded && Physics2D.OverlapBox(ledgeCheck.position, new Vector2(boxSize, boxSize), 0.0f, whatIsLedge);
+
+        //Let's player differ climbing by direction
+        int climbingLayerMask = whatIsGround;
+        if (facingRight)
+            climbingLayerMask = climbingLayerMask | whatIsClimbableLeft;
+        else climbingLayerMask = climbingLayerMask | whatIsClimbableRight;
+
+        walledUp = !onLedge && Physics2D.OverlapBox(ledgeCheck.position, new Vector2(boxSize, boxSize), 0.0f, climbingLayerMask);
+        walledDown = Physics2D.OverlapBox(wallCheckDown.position, new Vector2(boxSize, 0.5f * col.size.y - 0.015f), 0.0f, climbingLayerMask);
+        squeezed = Physics2D.OverlapBox(squeezeCheck.position, new Vector2(col.size.x - 0.2f, boxSize), 0.0f, whatIsGround);
         walled = walledUp && walledDown && !grounded;
 
-        wedged = Physics2D.OverlapBox(landingCheck.position, 2 * new Vector2(boxSize, boxSize), 0.0f, whatIsGround.value);
+        wedged = Physics2D.OverlapBox(landingCheck.position, 2 * new Vector2(boxSize, boxSize), 0.0f, whatIsGround);
 
         if (wallJumping && wallJumpEnd < Time.time) {
             wallJumping = false;
@@ -176,6 +189,13 @@ public class NinjaMove : MonoBehaviour {
         climbing = walled && vertical > 0.1f;
         wallGrab = walled && rb.velocity.y < 0.01f;
         //sliding = walled && !grounded && rb.velocity.y < 0.0f && !climbing;
+
+        if (collisionIgnored && revertCollisionIgnoreAt < Time.time)
+        {
+            Physics2D.IgnoreCollision(col, floor, false);
+            floor = null;
+            collisionIgnored = false;
+        }
     }
 
     
@@ -226,6 +246,21 @@ public class NinjaMove : MonoBehaviour {
         {
             rb.AddForce(Vector2.up * jumpHeight, ForceMode2D.Impulse);
             jumpNo++;
+        }
+        else if(Input.GetKeyDown(KeyCode.L) && ducking)
+        {
+            bool onPermeableFloor = Physics2D.OverlapBox(groundCheckFront.position, new Vector2(0.5f * col.size.x - 0.015f, boxSize), 0.0f, whatIsPermeable);
+            onPermeableFloor = onPermeableFloor && Physics2D.OverlapBox(groundCheckBack.position, new Vector2(0.5f * col.size.x - 0.015f, boxSize), 0.0f, whatIsPermeable);
+
+            if (onPermeableFloor)
+            {
+                
+
+                floor = Physics2D.OverlapBox(groundCheckFront.position, new Vector2(0.5f * col.size.x - 0.015f, boxSize), 0.0f, whatIsPermeable);
+                Physics2D.IgnoreCollision(col, floor);
+                revertCollisionIgnoreAt = Time.time + collisionIgnoreFrame;
+                collisionIgnored = true;
+            }
         }
         //wallJump init
         else if ((Input.GetKeyDown(KeyCode.L) && !wallJumping && walled) || wallJumping)

@@ -35,11 +35,13 @@ public class SecurityCameraMovement : MonoBehaviour {
         else Rotate();
 	}
 
+    public float maxDelta = 0.0f;
+
     void FollowPlayer()
     {
         Vector2 reference = target.position - transform.position;
         reference = new Vector2(-reference.y, reference.x);
-        
+
         transform.rotation = Quaternion.LookRotation(Vector3.forward, reference);
     }
 
