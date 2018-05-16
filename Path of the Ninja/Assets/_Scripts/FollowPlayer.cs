@@ -32,11 +32,12 @@ public class FollowPlayer : MonoBehaviour {
         Debug.Log(sceneName);
         ReadFile();
     }
-    
-    
+
+    float interpolation = 0.0f;
+
     void FixedUpdate()
     {
-        float interpolation = maxSpeed * Time.deltaTime;
+        interpolation = maxSpeed * Time.deltaTime;
 
         Vector3 position = this.transform.position;
         position.y = Mathf.Lerp(this.transform.position.y, player.position.y, interpolation);
@@ -48,22 +49,21 @@ public class FollowPlayer : MonoBehaviour {
 
     Vector3 HoldPositionInBounds(Vector3 position)
     {
-        if (getCurrentCameraBound(position) == -1)
-        {
-            float left = bound[currentBound].min.x + topRightEdgeVector.x;
-            float right = bound[currentBound].max.x - topRightEdgeVector.x;
+        currentBound = getCurrentCameraBound(position);
 
-            float bottom = bound[currentBound].min.y + topRightEdgeVector.y;
-            float up = bound[currentBound].max.y - topRightEdgeVector.y;
+        float left = bound[currentBound].min.x + topRightEdgeVector.x;
+        float right = bound[currentBound].max.x - topRightEdgeVector.x;
+
+        float bottom = bound[currentBound].min.y + topRightEdgeVector.y;
+        float up = bound[currentBound].max.y - topRightEdgeVector.y;
 
 
-            if (position.x < left) position.x = left;
-            else if (position.x > right) position.x = right;
+        if (position.x < left) position.x = Mathf.Lerp(this.transform.position.x, left, interpolation);// left;
+        else if (position.x > right) position.x = Mathf.Lerp(this.transform.position.x, right, interpolation);//right;
 
-            if (position.y < bottom) position.y = bottom;
-            else if (position.y > up) position.y = up;
-        }
-        else currentBound = getCurrentCameraBound(position);
+        if (position.y < bottom) position.y = Mathf.Lerp(this.transform.position.y, bottom, interpolation); //bottom;
+        else if (position.y > up) position.y = Mathf.Lerp(this.transform.position.y, up, interpolation); //up;
+        
 
         return position;
     }
@@ -72,9 +72,12 @@ public class FollowPlayer : MonoBehaviour {
     {
         for (int i = 0; i < bound.Count; i++)
         {
-            if (position.x - topRightEdgeVector.x >= bound[i].min.x && position.x + topRightEdgeVector.x <= bound[i].max.x
-                && position.y - topRightEdgeVector.y >= bound[i].min.y && position.y + topRightEdgeVector.y <= bound[i].max.y)
+            if (player.position.x >= bound[i].min.x && player.position.x <= bound[i].max.x
+              && player.position.y >= bound[i].min.y && player.position.y <= bound[i].max.y)
+            //if (position.x - topRightEdgeVector.x >= bound[i].min.x && position.x + topRightEdgeVector.x <= bound[i].max.x
+              //&& position.y - topRightEdgeVector.y >= bound[i].min.y && position.y + topRightEdgeVector.y <= bound[i].max.y)
             {
+                Debug.Log("Player is in BoundingBox " + i);
                 return i;
             }
         }

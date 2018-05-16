@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using UnityEngine;
 
 public class NinjaMove : MonoBehaviour {
-    public Vector3 velocity;
 
     //Unity Components
     private Rigidbody2D rb;
@@ -30,30 +29,31 @@ public class NinjaMove : MonoBehaviour {
 
 
     //Movement
-    private bool gF = false, gB = false, grounded = false, facingRight = true;
+    public bool gF = false, gB = false, grounded = false, facingRight = true;
     private int combo = 0;
     private float horizontal, vertical;
-    public float walkingSpeed = 5F, jumpHeight = 4F;
+    private float walkingSpeed = 5F, jumpHeight = 3.5f;
 
     //landing & slipping
     private float translation = 5.0f;
     private bool slipping = false, landing = false;
 
     //climbing
-    public float climbingSpeed = 5F;
+    private float climbingSpeed = 3F;
     public bool walled = false, wallGrab = false, walledUp = false, walledDown = false, climbing = false, 
         onLedge = false, wallJumping = false;
 
     //Sliding Attributes
-    public float slidingSpeed = 6F;
+    private float slidingSpeed = 6F;
 
     //walljump
     private float x = 0.0f;
-    public float  wallJumpSpeed = 10.0f, wallJumpFrame = 0.25f, wallJumpEnd = 0.0f, wallJumpHeight = 2.75f;
-    
+    private float  wallJumpSpeed = 3F, wallJumpFrame = 0.3f, wallJumpEnd = 0.0f, wallJumpHeight = 3F;
+    private Vector2 wallJumpDir = Vector2.zero;
+
     //Extended Movement
     private float duckingMeasurement = 0.0f;
-    private bool wedged = false, squeezed = false;
+    public bool wedged = false, squeezed = false;
     private bool ducking = false;
     private bool paused = false, controlHorizontal = true, controlVertical = true;
 
@@ -121,7 +121,6 @@ public class NinjaMove : MonoBehaviour {
 
     private void FixedUpdate()
     {
-        velocity = rb.velocity;
         HandleSensors();
         HandleState();
         HandleClimbing();
@@ -166,6 +165,9 @@ public class NinjaMove : MonoBehaviour {
         walledDown = Physics2D.OverlapBox(wallCheckDown.position, new Vector2(boxSize, 0.5f * col.size.y - 0.015f), 0.0f, climbingLayerMask);
         squeezed = Physics2D.OverlapBox(squeezeCheck.position, new Vector2(col.size.x - 0.2f, boxSize), 0.0f, whatIsGround);
         walled = walledUp && walledDown && !grounded;
+
+
+        if(onLedge) Debug.Log("On Ledge!");
 
         wedged = Physics2D.OverlapBox(landingCheck.position, 2 * new Vector2(boxSize, boxSize), 0.0f, whatIsGround);
 
@@ -213,20 +215,15 @@ public class NinjaMove : MonoBehaviour {
         if (slipping)
         {
             rb.velocity = new Vector2(facingRight ? translation : -translation, 0.0f);
-            Debug.Log("slipping");
         } else if (landing)
         {
             rb.velocity = new Vector2(facingRight ? translation : -translation, rb.velocity.y);
-            Debug.Log("Landing");
         }
         else if(wedged && !gF && !walledDown && rb.velocity.y == 0.0f)
         {
             rb.velocity = new Vector2(facingRight ? -3.5f : 3.5f, 0.0f);
-            Debug.Log("Wedged!");
         }
     }
-
-    public Vector2 wallJumpDir = Vector2.zero;
 
     private void HandleJumpAndFall() {
 
@@ -316,12 +313,6 @@ public class NinjaMove : MonoBehaviour {
             rb.velocity = new Vector2(hSpeed, vSpeed);
         }*/
     }
-
-    public float maxSS= 1F;
-    
-    
-
-
 
     public void Pause()
     {
@@ -439,7 +430,6 @@ public class NinjaMove : MonoBehaviour {
         anim.SetBool("climbing", climbing);
         anim.SetBool("ducking", ducking);
         anim.SetBool("onLedge", onLedge);
-
         anim.SetFloat("VeloY", rb.velocity.y);
     }
 

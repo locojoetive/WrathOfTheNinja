@@ -295,7 +295,6 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Assets\_Scripts\AdjustNinjaQuad.cs" />
-    <Compile Include="Assets\_Scripts\ControllCollider.cs" />
     <Compile Include="Assets\_Scripts\FollowPlayer.cs" />
     <Compile Include="Assets\_Scripts\LazyTime.cs" />
     <Compile Include="Assets\_Scripts\LedgesScript.cs" />
