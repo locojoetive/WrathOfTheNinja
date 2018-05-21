@@ -10,79 +10,133 @@ public class FollowPlayer : MonoBehaviour {
 
     private Transform player;
     private Vector2 currentVelocity = Vector2.zero;
-    public float smoothTime = 0.05f, maxSpeed = 20, velocity = 0.0F;
+
+    //Floating Camera
+    public float maxSpeed = 20, velocity = 0.0F;
+    private float interpolation = 0.0f;
     public float zPosition = -17F;
-    public float maxX = 0.0f, maxY = 0.0f;
-    public Vector3 stageDimensions = Vector3.zero;
 
-
-    Vector2 topRightEdgeVector;
-    private List<Bounds> bound;
+    //For loading stage bounds
     private string sceneName;
-    public int currentBound = 0;
-
+    Vector2 topRightEdgeVector;
+    public List<Bounds> bound;
+    public List<int> currentBounds = new List<int>(), currentPlayerBounds = new List<int>();
+    
     // Use this for initialization
     void Start () {
         bound = new List<Bounds>();
         player = GameObject.FindGameObjectWithTag("Player").transform;
-        stageDimensions = Camera.main.ScreenToWorldPoint(new Vector3(Screen.width, Screen.height, 0));
         
-        topRightEdgeVector = Camera.main.ViewportToWorldPoint(new Vector2(1, 1));
+        topRightEdgeVector = Camera.main.ViewportToWorldPoint(new Vector2(1, 1)) - transform.position;
         sceneName = SceneManager.GetActiveScene().name;
-        Debug.Log(sceneName);
         ReadFile();
+
+        currentBounds.Add(0);
     }
-
-    float interpolation = 0.0f;
-
+    
     void FixedUpdate()
     {
+        HoldPositionInBounds();
+    }
+
+    void HoldPositionInBounds()
+    {
+
+        Vector3 position = player.position;
         interpolation = maxSpeed * Time.deltaTime;
 
-        Vector3 position = this.transform.position;
-        position.y = Mathf.Lerp(this.transform.position.y, player.position.y, interpolation);
-        position.x = Mathf.Lerp(this.transform.position.x, player.position.x, interpolation);
 
-        position = HoldPositionInBounds(position);
-        transform.position = position;
-    }
+        SetCurrentBounds();
 
-    Vector3 HoldPositionInBounds(Vector3 position)
-    {
-        currentBound = getCurrentCameraBound(position);
-
-        float left = bound[currentBound].min.x + topRightEdgeVector.x;
-        float right = bound[currentBound].max.x - topRightEdgeVector.x;
-
-        float bottom = bound[currentBound].min.y + topRightEdgeVector.y;
-        float up = bound[currentBound].max.y - topRightEdgeVector.y;
-
-
-        if (position.x < left) position.x = Mathf.Lerp(this.transform.position.x, left, interpolation);// left;
-        else if (position.x > right) position.x = Mathf.Lerp(this.transform.position.x, right, interpolation);//right;
-
-        if (position.y < bottom) position.y = Mathf.Lerp(this.transform.position.y, bottom, interpolation); //bottom;
-        else if (position.y > up) position.y = Mathf.Lerp(this.transform.position.y, up, interpolation); //up;
         
 
-        return position;
-    }
+        float left = Mathf.Infinity;
+        float right = Mathf.NegativeInfinity;
 
-    int getCurrentCameraBound(Vector3 position)
-    {
-        for (int i = 0; i < bound.Count; i++)
+        float bottom = Mathf.Infinity;
+        float up = Mathf.NegativeInfinity;
+
+        if (PlayerInCameraView())
         {
-            if (player.position.x >= bound[i].min.x && player.position.x <= bound[i].max.x
-              && player.position.y >= bound[i].min.y && player.position.y <= bound[i].max.y)
-            //if (position.x - topRightEdgeVector.x >= bound[i].min.x && position.x + topRightEdgeVector.x <= bound[i].max.x
-              //&& position.y - topRightEdgeVector.y >= bound[i].min.y && position.y + topRightEdgeVector.y <= bound[i].max.y)
+            for (int i = 0; i < currentBounds.Count; i++)
             {
-                Debug.Log("Player is in BoundingBox " + i);
-                return i;
+                if (left > bound[currentBounds[i]].min.x)
+                    left = bound[currentBounds[i]].min.x;
+
+                if (right < bound[currentBounds[i]].max.x)
+                    right = bound[currentBounds[i]].max.x;
+
+                if (bottom > bound[currentBounds[i]].min.y)
+                    bottom = bound[currentBounds[i]].min.y;
+
+                if (up < bound[currentBounds[i]].max.y)
+                    up = bound[currentBounds[i]].max.y;
+
             }
         }
+        else
+        {
+            for (int i = 0; i < currentPlayerBounds.Count; i++)
+            {
+                if (left > bound[currentPlayerBounds[i]].min.x)
+                    left = bound[currentPlayerBounds[i]].min.x;
 
-        return -1;
+                if (right < bound[currentPlayerBounds[i]].max.x)
+                    right = bound[currentPlayerBounds[i]].max.x;
+
+                if (bottom > bound[currentPlayerBounds[i]].min.y)
+                    bottom = bound[currentPlayerBounds[i]].min.y;
+
+                if (up < bound[currentPlayerBounds[i]].max.y)
+                    up = bound[currentPlayerBounds[i]].max.y;
+
+            }
+        }
+        if (left != Mathf.NegativeInfinity && right != Mathf.Infinity &&
+            bottom != Mathf.NegativeInfinity && up != Mathf.Infinity)
+        {
+            if (position.x < left) position.x = left;// left;
+            else if (position.x > right) position.x = right;//right;
+
+            if (position.y < bottom) position.y = bottom; //bottom;
+            else if (position.y > up) position.y = up; //up;   
+
+
+            position.x = Mathf.Lerp(transform.position.x, position.x, interpolation);
+            position.y = Mathf.Lerp(transform.position.y, position.y, interpolation);
+            position.z = transform.position.z;
+            transform.position = position;
+        }
+    }
+
+    void SetCurrentBounds()
+    {
+        currentBounds.Clear();
+        currentPlayerBounds.Clear();
+        for (int i = 0; i < bound.Count; i++)
+        {
+            if (transform.position.x >= bound[i].min.x && transform.position.x <= bound[i].max.x
+                && transform.position.y >= bound[i].min.y && transform.position.y <= bound[i].max.y)
+            {
+                currentBounds.Add(i);
+            }
+
+            if (player.position.x >= bound[i].min.x - topRightEdgeVector.x && player.position.x <= bound[i].max.x + topRightEdgeVector.x
+                && player.position.y >= bound[i].min.y - topRightEdgeVector.y && player.position.y <= bound[i].max.y + topRightEdgeVector.y)
+            {
+                currentPlayerBounds.Add(i);
+            }
+        }
+    }
+    
+    bool PlayerInCameraView()
+    {
+        foreach(int i in currentBounds)
+        {
+            if (currentPlayerBounds.Contains(i))
+                return true;
+        }
+        return false;
     }
 
     void ReadFile()
@@ -95,18 +149,17 @@ public class FollowPlayer : MonoBehaviour {
 
         for (int i = 0; i < lines.Length; i++)
         {
-            Debug.Log(lines[i]);
+
             float[] temp = new float[4];
-            temp[0] = float.Parse(lines[i].Split(',')[0]);
-            temp[1] = float.Parse(lines[i].Split(',')[1]);
-            temp[2] = float.Parse(lines[i].Split(',')[2]);
-            temp[3] = float.Parse(lines[i].Split(',')[3]);
+            temp[0] = float.Parse(lines[i].Split(',')[0]) + topRightEdgeVector.x;//left
+            temp[1] = float.Parse(lines[i].Split(',')[1]) + topRightEdgeVector.y;//bottom;
+            temp[2] = float.Parse(lines[i].Split(',')[2]) - topRightEdgeVector.x;//right
+            temp[3] = float.Parse(lines[i].Split(',')[3]) - topRightEdgeVector.y;//top
 
             Vector3 center = new Vector3((temp[0] + temp[2]) / 2F, (temp[1] + temp[3]) / 2F, 0.0f);
             Vector3 size = new Vector3(temp[2] - temp[0], temp[3] - temp[1], 0.0f);
 
             Bounds b = new Bounds(center, size);
-            Debug.Log(b);
             bound.Add(b);
         }
     }
