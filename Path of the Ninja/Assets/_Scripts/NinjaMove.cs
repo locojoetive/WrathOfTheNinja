@@ -29,7 +29,7 @@ public class NinjaMove : MonoBehaviour {
 
 
     //Movement
-    public bool gF = false, gB = false, grounded = false, facingRight = true;
+    public bool gF = false, gB = false, grounded = false, facingRight = true, jumping = false;
     private int combo = 0;
     private float horizontal, vertical;
     private float walkingSpeed = 5F, jumpHeight = 3.5f;
@@ -99,7 +99,6 @@ public class NinjaMove : MonoBehaviour {
         col = GetComponent<CapsuleCollider2D>();
         anim = GetComponent<Animator>();
         ninjaAttack = GetComponent<NinjaAttacks>();
-
         //Time.timeScale = 0.25f;
         //initialize ground tags & sensors positions
         whatIsGround = 1 << 8;
@@ -116,7 +115,10 @@ public class NinjaMove : MonoBehaviour {
     // Update is called once per frame
     void Update()
     {
-        HandleAnimation();        
+        if (Input.GetKeyDown(KeyCode.L) && jumpNo == 0)
+            jumping = true;
+
+        HandleAnimation();
     }
 
     private void FixedUpdate()
@@ -230,6 +232,7 @@ public class NinjaMove : MonoBehaviour {
         if (grounded && jumpNo != 0)
         {
             jumpNo = 0;
+            jumping = false;
             //Form change variables at landing || squeezeing variables
             //calcLandingsqueezeY();
         }
@@ -239,12 +242,12 @@ public class NinjaMove : MonoBehaviour {
         }
         
         //initialize jump
-        if (Input.GetKeyDown(KeyCode.L) && grounded && !ducking)
+        if (grounded && jumping && !ducking)
         {
             rb.AddForce(Vector2.up * jumpHeight, ForceMode2D.Impulse);
             jumpNo++;
         }
-        else if(Input.GetKeyDown(KeyCode.L) && ducking)
+        else if(grounded && jumping && ducking)
         {
             bool onPermeableFloor = Physics2D.OverlapBox(groundCheckFront.position, new Vector2(0.5f * col.size.x - 0.015f, boxSize), 0.0f, whatIsPermeable);
             onPermeableFloor = onPermeableFloor && Physics2D.OverlapBox(groundCheckBack.position, new Vector2(0.5f * col.size.x - 0.015f, boxSize), 0.0f, whatIsPermeable);

@@ -4,16 +4,18 @@ using UnityEngine;
 
 public class SecurityWatchScript : MonoBehaviour {
 
-    Vector2 upperBorder;
+    Vector2 scale;
     public bool cf = false;
 
     public float maxDepth = 30;
     private float step = 0.0f;
-    private int numberRays = 8;
+    private int numberRays = 15;
     public float alphaRange = 0.0f;
     private float alpha;
-    public bool playerDetected = false;
+    private float diagonal = 0.0f;
 
+    public bool playerDetected = false;
+    
     List<Vector2> ray = new List<Vector2>();
     Transform target;
     public GameObject rayRenderer;
@@ -35,6 +37,7 @@ public class SecurityWatchScript : MonoBehaviour {
     void Update () {
         if (cf)
         {
+
             initFOV();
             initRays();
             cf = false;
@@ -43,15 +46,13 @@ public class SecurityWatchScript : MonoBehaviour {
     }
     void initFOV()
     {
+        scale = (Vector2)transform.localScale;
+        //upperBorder.Normalize();
+        diagonal = Mathf.Sqrt(scale.x * scale.x + scale.y * scale.y);
+        float sinAlpha = scale.y / diagonal;
 
-        if (alphaRange <= 0.1f)
-        {
-            upperBorder = (Vector2)transform.localScale;
-            upperBorder.Normalize();
-            alpha = Mathf.Rad2Deg * Mathf.Asin(upperBorder.y);
-        }
-        else alpha = Mathf.Abs(alphaRange);
-
+        alpha = Mathf.Rad2Deg * Mathf.Asin(sinAlpha);
+        
         step = 2 * alpha / numberRays;
     }
 
@@ -61,10 +62,11 @@ public class SecurityWatchScript : MonoBehaviour {
 
         for (int i = 0; i <= numberRays; i++)
         {
-            float x = Mathf.Cos(alpha * Mathf.Deg2Rad);
-            float y = Mathf.Sin(alpha * Mathf.Deg2Rad);
-            Vector2 r = new Vector2(x, y);
-            r.Normalize();
+            float x = Mathf.Cos(alpha * Mathf.Deg2Rad) * scale.x;
+            float y = Mathf.Sin(alpha * Mathf.Deg2Rad) * scale.y;
+
+            // -x weil Gegner bisher als x dimension -1 haben
+            Vector2 r = new Vector2(x , y);
             ray.Add(r);
             alpha -= step;
         }
@@ -73,7 +75,6 @@ public class SecurityWatchScript : MonoBehaviour {
 
     public void DrawRayAndSpotLight()
     {
-
         bool detected = false;
         List<Vector2> hitpoint = new List<Vector2>();
         for (int i = 0; i <= numberRays; i++)
@@ -82,7 +83,7 @@ public class SecurityWatchScript : MonoBehaviour {
             Vector3 r = ray[i]; //this is local space
             RaycastHit2D hit = Physics2D.Raycast((Vector2)transform.position, transform.TransformDirection(r), maxDepth);
 
-            if (hit.point != null && hit.point != Vector2.zero)
+            if (hit.point != null && hit.collider.tag != "trigger" && hit.point != Vector2.zero)
             {
                 r = transform.InverseTransformPoint(hit.point);
                 if (hit.collider.tag == "Player")

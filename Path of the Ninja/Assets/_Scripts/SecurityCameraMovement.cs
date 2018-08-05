@@ -7,15 +7,16 @@ public class SecurityCameraMovement : MonoBehaviour {
     public Vector3 originRotation;
     private Quaternion upperBorder, bottomBorder;
     public float angle = 30;
-    public float timeFrameConfirmation=2F, maxSpeed = 2F;
+    public float timeFrameConfirmation=1F, maxSpeed = 2F;
     public bool cr = false, goingDown = true, detectionOn = false;
-    private SecurityWatchScript moveScript;
+    private SecurityWatchScript watchScript;
     public Transform target;
-
+    private float confirmedAt = 0.0f;
+    public float step;
     //Use this for initialization
 	void Start () {
         calcRange();
-        moveScript = GetComponent<SecurityWatchScript>();
+        watchScript = GetComponent<SecurityWatchScript>();
         target = GameObject.FindGameObjectWithTag("Player").GetComponent<Transform>();
     }
 
@@ -37,39 +38,56 @@ public class SecurityCameraMovement : MonoBehaviour {
 
     public float maxDelta = 0.0f;
 
+    Vector2 refVel;
+
     void FollowPlayer()
     {
-        Vector2 reference = target.position - transform.position;
-        reference = new Vector2(-reference.y, reference.x);
-
-        transform.rotation = Quaternion.LookRotation(Vector3.forward, reference);
+        //Rotate towards Player
+        Vector3 vectorToTarget = transform.position - target.position;
+        float angle = Mathf.Atan2(vectorToTarget.y, vectorToTarget.x) * Mathf.Rad2Deg;
+        Quaternion q = Quaternion.AngleAxis(angle, Vector3.forward);
+        transform.rotation = Quaternion.Slerp(transform.rotation, q, Time.deltaTime * step);
     }
 
     void CheckForPlayer()
     {
-        detectionOn = moveScript.getDetectionStatus();
+        if(!watchScript.getDetectionStatus())
+        {
+            confirmedAt = Time.time + timeFrameConfirmation;
+        }
+
+        if(Time.time > confirmedAt)
+        {
+            detectionOn = true;
+        }
+        else
+        {
+            detectionOn = false;
+        }
 
     }
 
     void Rotate()
     {
-        if (transform.eulerAngles.z <= originRotation.z - angle) goingDown = false;
-        else if (transform.eulerAngles.z >= originRotation.z + angle) goingDown = true;
-        
-        float interpolation = maxSpeed * Time.deltaTime;
-        float rotation = 0;
+        if (confirmedAt > Time.time)
+        {
+            if (transform.eulerAngles.z <= originRotation.z - angle) goingDown = false;
+            else if (transform.eulerAngles.z >= originRotation.z + angle) goingDown = true;
 
-        if (goingDown) rotation = Mathf.Lerp(0, -angle, interpolation);
-        else rotation = Mathf.Lerp(0, angle, interpolation);
+            float interpolation = maxSpeed * Time.deltaTime;
+            float rotation = 0;
 
-        
-        this.transform.Rotate(0, 0, rotation, Space.Self);
+            if (goingDown) rotation = Mathf.Lerp(0, -angle, interpolation);
+            else rotation = Mathf.Lerp(0, angle, interpolation);
+
+
+            this.transform.Rotate(0, 0, rotation, Space.Self);
+        }
 
     }
 
     void calcRange()
     {
         originRotation = transform.eulerAngles;
-
     }
 }
