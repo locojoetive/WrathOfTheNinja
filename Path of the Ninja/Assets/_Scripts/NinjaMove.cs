@@ -23,7 +23,7 @@ public class NinjaMove : MonoBehaviour {
     public Transform wallCheckUp;
     public Transform wallCheckDown;
     public Transform squeezeCheck;
-    public Transform landingCheck;
+    public Transform wedgedCheck;
     public Transform ledgeCheck;
     private float boxSize = 0.005f;
 
@@ -63,23 +63,6 @@ public class NinjaMove : MonoBehaviour {
     private float fallMultiplier = 2.5f;
     private float lowJumpMultiplier = 2f;
 
-    public void HandleClimbing()
-    {
-        if (onLedge)
-        {
-            rb.velocity = Vector2.zero;
-            if (vertical > 0)
-            {
-                rb.AddForce(Vector2.up * 3.0f, ForceMode2D.Impulse);
-            }
-        }
-        else if (climbing)
-        {
-            rb.velocity = new Vector2(0.0f, climbingSpeed * vertical);
-        } else if (walled && !grounded && rb.velocity.y < -slidingSpeed) {
-            rb.velocity = new Vector2(0.0f, -slidingSpeed);
-        }
-    }
 
 
     public float convergeLinearly(float FROM, float TO, float UNTIL)
@@ -131,6 +114,26 @@ public class NinjaMove : MonoBehaviour {
         HandleJumpAndFall();
     }
 
+    public void HandleClimbing()
+    {
+        if ( onLedge && walledDown && vertical > 0)//((rb.velocity.y < 0.01f && jumping && !walledUp && walledDown))) // || ( climbing || wallGrab )
+        {
+            rb.velocity = Vector2.zero;
+            {
+                Debug.Log("On Ledge!");
+                rb.AddForce(Vector2.up * 3.0f, ForceMode2D.Impulse);
+            }
+        }
+        else if (climbing)
+        {
+            rb.velocity = new Vector2(0.0f, climbingSpeed * vertical);
+        }
+        else if (walled && !grounded && rb.velocity.y < -slidingSpeed)
+        {
+            rb.velocity = new Vector2(0.0f, -slidingSpeed);
+        }
+    }
+
     private void HandleSensors()
     {
         groundCheckFront.localPosition = new Vector2(col.offset.x + 0.25f * col.size.x, col.offset.y - 0.5f * col.size.y);
@@ -140,7 +143,7 @@ public class NinjaMove : MonoBehaviour {
         squeezeCheck.localPosition = new Vector2(col.offset.x, col.offset.y + 0.5f * col.size.y); //for staying duck, if no space
 
         ledgeCheck.localPosition = new Vector2(col.offset.x + 0.5f * col.size.x, col.offset.y + 0.5f * col.size.y - 0.5f * boxSize);
-        landingCheck.localPosition = new Vector2(col.offset.x + 0.5f * col.size.x, col.offset.y - 0.5f * col.size.y);
+        wedgedCheck.localPosition = new Vector2(col.offset.x + 0.4375f * col.size.x, col.offset.y - 0.4375f * col.size.y);
     }
 
     private void HandleState()
@@ -155,7 +158,6 @@ public class NinjaMove : MonoBehaviour {
 
         //climbing
         
-        onLedge = !grounded && Physics2D.OverlapBox(ledgeCheck.position, new Vector2(boxSize, boxSize), 0.0f, whatIsLedge);
 
         //Let's player differ climbing by direction
         int climbingLayerMask = whatIsGround;
@@ -163,16 +165,28 @@ public class NinjaMove : MonoBehaviour {
             climbingLayerMask = climbingLayerMask | whatIsClimbableLeft;
         else climbingLayerMask = climbingLayerMask | whatIsClimbableRight;
 
-        walledUp = !onLedge && Physics2D.OverlapBox(ledgeCheck.position, new Vector2(boxSize, boxSize), 0.0f, climbingLayerMask);
-        walledDown = Physics2D.OverlapBox(wallCheckDown.position, new Vector2(boxSize, 0.5f * col.size.y - 0.015f), 0.0f, climbingLayerMask);
+        onLedge = Physics2D.OverlapBox(wallCheckUp.position, Vector2.up * 0.25f * col.size.y + Vector2.right * boxSize, 0.0f, whatIsLedge);
+
+        walledUp = !onLedge && Physics2D.OverlapBox(ledgeCheck.position, Vector2.right*boxSize + Vector2.up * 0.25f * col.size.y, 0.0f, climbingLayerMask);
+        walledDown = Physics2D.OverlapBox(wallCheckDown.position, Vector2.right * boxSize + Vector2.up * 0.25f * col.size.y, 0.0f, climbingLayerMask);
+        
         squeezed = Physics2D.OverlapBox(squeezeCheck.position, new Vector2(col.size.x - 0.2f, boxSize), 0.0f, whatIsGround);
+        
         walled = walledUp && walledDown && !grounded;
 
+        wedged = Physics2D.OverlapBox(wedgedCheck.position, (Vector2.right * col.size.x + Vector2.up * col.size.y) *0.0625f, 0.0f, whatIsGround);
+        Debug.DrawLine(
+            wallCheckDown.position - new Vector3(0.0f, 0.25f * col.size.y, 0.0f),
+            wallCheckDown.position - new Vector3(0.5f * col.size.x, 0.25f * col.size.y, 0.0f),
+            Color.black
+        );
+        Debug.DrawLine(
+            wedgedCheck.position + new Vector3(0.0f, boxSize, 0.0f),
+            wedgedCheck.position + new Vector3(0.5f * col.size.x, boxSize, 0.0f),
+            Color.black
+        );
 
-        if(onLedge) Debug.Log("On Ledge!");
-
-        wedged = Physics2D.OverlapBox(landingCheck.position, 2 * new Vector2(boxSize, boxSize), 0.0f, whatIsGround);
-
+        
         if (wallJumping && wallJumpEnd < Time.time) {
             wallJumping = false;
         }
@@ -190,8 +204,8 @@ public class NinjaMove : MonoBehaviour {
 
 
         //wall behaviour
-        climbing = walled && vertical > 0.1f;
-        wallGrab = walled && rb.velocity.y < 0.01f;
+        climbing = !onLedge && walled && vertical > 0F;
+        wallGrab = walled && rb.velocity.y <= 0.01f;
         //sliding = walled && !grounded && rb.velocity.y < 0.0f && !climbing;
 
         if (collisionIgnored && revertCollisionIgnoreAt < Time.time)
@@ -221,7 +235,7 @@ public class NinjaMove : MonoBehaviour {
         {
             rb.velocity = new Vector2(facingRight ? translation : -translation, rb.velocity.y);
         }
-        else if(wedged && !gF && !walledDown && rb.velocity.y == 0.0f)
+        else if(wedged && !gF && !walled && rb.velocity.y == 0.0f)
         {
             rb.velocity = new Vector2(facingRight ? -3.5f : 3.5f, 0.0f);
         }
