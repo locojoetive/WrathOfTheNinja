@@ -9,33 +9,61 @@ public class SecurityGuardMovement : MonoBehaviour {
     private bool facingRight = true;
     private Rigidbody2D rb;
     private Vector3 scale;
-    private SecurityWatchScript watchScript;
     private bool staying = false;
     private Animator animator;
 
-	// Use this for initialization
-	void Start () {
+    private SecurityWatchScript watchScript;
+    public float confirmedAt = 0.0f, runningSpeed;
+    public bool cautious = false, playerDetected = false;
+    // Use this for initialization
+    void Start () {
         rb = GetComponent<Rigidbody2D>();
+        animator = GetComponent<Animator>();
+        watchScript = GetComponent<SecurityWatchScript>();
+        
         chill = Time.time + turnFrequency;
         turnAt = chill + stayTime;
         scale = transform.localScale;
-        watchScript = GetComponent<SecurityWatchScript>();
-        animator = GetComponent<Animator>();
     }
 	
 	// Update is called once per frame
 	void Update () {
         HandleMovement();
         HandleTurnAround();
+        HandleDetection();
         animator.SetBool("staying", staying);
+
 	}
+
+    void HandleDetection()
+    {
+        if (watchScript.getDetectionStatus())
+        {
+            if (!cautious)
+            {
+                cautious = true;
+                confirmedAt = Time.time + 5.0f;
+            } else if(confirmedAt > Time.time)
+            {
+                playerDetected = true;
+            }
+        } else
+        {
+            cautious = false;
+            playerDetected = false;
+        }
+    }
 
     void HandleMovement()
     {
-        if (Time.time < chill)
+        if ( !cautious && Time.time < chill )
         {
             staying = false;
             rb.velocity = facingRight ? new Vector2(speed, rb.velocity.y) : new Vector2(-speed, rb.velocity.y);
+        } else if (playerDetected)
+        {
+            staying = false;
+            rb.velocity = facingRight ? new Vector2(2*speed, rb.velocity.y) : new Vector2(-2*speed, rb.velocity.y);
         }
     }
 

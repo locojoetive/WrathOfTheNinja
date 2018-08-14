@@ -4,142 +4,98 @@ using UnityEngine;
 
 public class SecurityWatchScript : MonoBehaviour {
 
-    Vector2 scale;
     public bool cf = false;
-
-    public float maxDepth = 30;
-    private float step = 0.0f;
-    private int numberRays = 15;
-    public float alphaRange = 0.0f;
-    private float alpha;
-    private float diagonal = 0.0f;
-
-    public bool playerDetected = false;
+    // FOV
+    private float angle;
+    public Vector2 scale;
+    public float hypothenuse = 0.0f;
+    public float maxDepth;
+    public int numberRays = 15;
+    Vector2[] detectionRay;
     
-    List<Vector2> ray = new List<Vector2>();
     Transform target;
     public GameObject rayRenderer;
     public List<LineRenderer> spotLight;
 
+    public LayerMask layerMask;
+    public bool playerDetected = false;
 
-	// Use this for initialization
-	void Start ()
+    // Use this for initialization
+    void Start ()
     {
         initFOV();
         initRays();
-
-        initSpotLight();
-
+        // initSpotLight();
         target = GameObject.FindGameObjectWithTag("Player").transform;
     }
     
     // Update is called once per frame
     void Update () {
+        initFOV();
+        initRays();
+
         if (cf)
         {
-
             initFOV();
             initRays();
+            initSpotLight();
             cf = false;
         }
         DrawRayAndSpotLight();
     }
     void initFOV()
     {
-        scale = (Vector2)transform.localScale;
-        //upperBorder.Normalize();
-        diagonal = Mathf.Sqrt(scale.x * scale.x + scale.y * scale.y);
-        float sinAlpha = scale.y / diagonal;
-
-        alpha = Mathf.Rad2Deg * Mathf.Asin(sinAlpha);
         
-        step = 2 * alpha / numberRays;
+        //upperBorder.Normalize();
+        hypothenuse = Mathf.Sqrt(scale.x * scale.x + scale.y * scale.y);
+        float sinAngle = Mathf.Abs(scale.y) / hypothenuse;
+        angle = Mathf.Rad2Deg * Mathf.Asin(sinAngle);
     }
 
     void initRays() {
 
-        ray = new List<Vector2>();
+        detectionRay = new Vector2[numberRays];
+        float step = 2*angle / numberRays;
+        float alpha = angle;
 
-        for (int i = 0; i <= numberRays; i++)
+        for (int i = 0; i < numberRays; i++)
         {
-            float x = Mathf.Cos(alpha * Mathf.Deg2Rad) * scale.x;
-            float y = Mathf.Sin(alpha * Mathf.Deg2Rad) * scale.y;
-
-            // -x weil Gegner bisher als x dimension -1 haben
-            Vector2 r = new Vector2(x , y);
-            ray.Add(r);
+            float x = Mathf.Cos(alpha*Mathf.Deg2Rad);
+            float y = Mathf.Sin(alpha*Mathf.Deg2Rad);
+            Vector2 direction = new Vector2(x, y);
+            direction.Normalize();
+            detectionRay[i] = direction;
+            Debug.Log(alpha + " deg with Ray " + i + ":" + detectionRay[i]);
             alpha -= step;
         }
-        
-    }
-
-    public void DrawRayAndSpotLight()
-    {
-        bool detected = false;
-        List<Vector2> hitpoint = new List<Vector2>();
-        for (int i = 0; i <= numberRays; i++)
-        {
-            spotLight[i].SetPosition(0, transform.position);
-            Vector3 r = ray[i]; //this is local space
-            RaycastHit2D hit = Physics2D.Raycast((Vector2)transform.position, transform.TransformDirection(r), maxDepth);
-
-            if (hit.point != null && hit.collider.tag != "trigger" && hit.point != Vector2.zero)
-            {
-                r = transform.InverseTransformPoint(hit.point);
-                if (hit.collider.tag == "Player")
-                {
-                    detected = true;
-                    Debug.DrawRay(transform.position, transform.TransformVector(r), Color.red);
-                    spotLight[i].SetPosition(1, transform.TransformPoint(r));
-                }
-                else
-                {
-                    Debug.DrawRay(transform.position, transform.TransformVector(r), Color.blue);
-                    spotLight[i].SetPosition(1, transform.TransformPoint(r));
-                }
-            }
-            else
-            {
-                Debug.DrawRay(transform.position, maxDepth * transform.TransformDirection(r), Color.green);
-                spotLight[i].SetPosition(1, transform.position + maxDepth * transform.TransformDirection(r));
-            }
-        }
-        playerDetected = detected;
     }
 
     void initSpotLight()
     {
         spotLight = new List<LineRenderer>();
-
-        for (int i = 0; i <= numberRays; i++)
-        {
-            GameObject rei = Instantiate(rayRenderer, transform.position, transform.rotation, transform);
-
-            LineRenderer lr = rei.GetComponent<LineRenderer>();
-            lr.SetPosition(0, this.transform.position);
-            spotLight.Add(lr);
-
-        }
-    }
-    
-
-    void updateRays()
-    {
         for (int i = 0; i < numberRays; i++)
         {
-            Vector2 r = ray[i];
+            GameObject rei = Instantiate(rayRenderer, transform.position, transform.rotation, transform);
+            LineRenderer lr = rei.GetComponent<LineRenderer>();
+            lr.SetPosition(0, (Vector2)transform.position + detectionRay[i]);
+            spotLight.Add(lr);
+        }
+    }
 
-            RaycastHit2D hit = Physics2D.Raycast(transform.position, r, maxDepth);
-
-            if (hit.point != null && hit.point != Vector2.zero)
+    public void DrawRayAndSpotLight()
+    {
+        bool detected = false;
+        for (int i = 0; i < numberRays; i++)
+        {
+            // spotLight[i].SetPosition(0, transform.position);
+            Vector2 direction = (Vector2)transform.InverseTransformDirection(detectionRay[i]) 
+                * maxDepth;
+            RaycastHit2D hit = Physics2D.Raycast((Vector2)transform.position, direction, maxDepth, layerMask.value);
+            if (hit.transform != null)
             {
-                r = hit.point - (Vector2)transform.position;
-                if (hit.collider.tag == "Player")
-                {
-                    Debug.DrawRay(transform.position, transform.TransformDirection(r), Color.red);
-                }
-                else Debug.DrawRay(transform.position, transform.TransformDirection(r));
-            }
+                direction = (Vector3)hit.point - transform.position;
+                Debug.DrawRay(transform.position, direction, Color.red);
+            } else Debug.DrawRay(transform.position, direction*maxDepth, Color.green);
         }
     }
 
@@ -150,21 +106,7 @@ public class SecurityWatchScript : MonoBehaviour {
     
     public void SkipTrigger()
     {
-        //This may be usefull to skip trigger collider
-     /*if (hit.collider.gameObject.tag == "ledge")
-     {
-         foreach (RaycastHit2D h in (Physics2D.RaycastAll(transform.position, r, maxDepth))){
-             if (h.collider.gameObject.tag != "ledge")
-             {
-                 hit = h;
-                 contactPoint = hit.point;
-             }    
-         }
-         r = contactPoint - transform.position;
-         Debug.DrawRay(transform.position, r);
-     }
-     else
-     {*/
+
     }
 
 }

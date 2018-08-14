@@ -105,6 +105,9 @@ public class FollowPlayer : MonoBehaviour {
             position.x = Mathf.Lerp(transform.position.x, position.x, interpolation);
             position.y = Mathf.Lerp(transform.position.y, position.y, interpolation);
             position.z = transform.position.z;
+            if (position.x != Mathf.Infinity && position.x != Mathf.NegativeInfinity &&
+                position.y != Mathf.Infinity && position.y != Mathf.NegativeInfinity &&
+                position.z != Mathf.Infinity && position.z != Mathf.NegativeInfinity)
             transform.position = position;
         }
     }
