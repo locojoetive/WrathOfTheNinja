@@ -13,13 +13,14 @@ public class SecurityGuardMovement : MonoBehaviour {
     private Animator animator;
 
     private SecurityWatchScript watchScript;
-    public float confirmedAt = 0.0f, runningSpeed;
+    private float confirmedAt = 0.0f;
+    public float confirmedAfter, runningSpeed;
     public bool cautious = false, playerDetected = false;
     // Use this for initialization
     void Start () {
         rb = GetComponent<Rigidbody2D>();
         animator = GetComponent<Animator>();
-        watchScript = GetComponent<SecurityWatchScript>();
+        watchScript = GetComponentInChildren<SecurityWatchScript>();
         
         chill = Time.time + turnFrequency;
         turnAt = chill + stayTime;
@@ -42,10 +43,12 @@ public class SecurityGuardMovement : MonoBehaviour {
             if (!cautious)
             {
                 cautious = true;
-                confirmedAt = Time.time + 5.0f;
-            } else if(confirmedAt > Time.time)
+                confirmedAt = Time.time + confirmedAfter;
+                staying = true;
+            } else if(confirmedAt < Time.time)
             {
                 playerDetected = true;
+                staying = false;
             }
         } else
         {
@@ -69,7 +72,7 @@ public class SecurityGuardMovement : MonoBehaviour {
 
     void HandleTurnAround()
     {
-        if (Time.time > chill)
+        if (!cautious && Time.time > chill)
         {
             if (!staying)
             {

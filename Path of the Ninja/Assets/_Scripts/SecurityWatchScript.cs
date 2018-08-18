@@ -6,14 +6,12 @@ public class SecurityWatchScript : MonoBehaviour {
 
     public bool cf = false;
     // FOV
-    private float angle;
+    public float angle;
     public Vector2 scale;
-    public float hypothenuse = 0.0f;
     public float maxDepth;
-    public int numberRays = 15;
-    Vector2[] detectionRay;
+    public int numberRays;
+    Vector2[] detectionRays;
     
-    Transform target;
     public GameObject rayRenderer;
     public List<LineRenderer> spotLight;
 
@@ -26,47 +24,32 @@ public class SecurityWatchScript : MonoBehaviour {
         initFOV();
         initRays();
         // initSpotLight();
-        target = GameObject.FindGameObjectWithTag("Player").transform;
     }
     
     // Update is called once per frame
     void Update () {
-        initFOV();
-        initRays();
-
-        if (cf)
-        {
-            initFOV();
-            initRays();
-            initSpotLight();
-            cf = false;
-        }
         DrawRayAndSpotLight();
     }
     void initFOV()
     {
-        
-        //upperBorder.Normalize();
-        hypothenuse = Mathf.Sqrt(scale.x * scale.x + scale.y * scale.y);
+        float hypothenuse = Mathf.Sqrt(scale.x * scale.x + scale.y * scale.y);
         float sinAngle = Mathf.Abs(scale.y) / hypothenuse;
         angle = Mathf.Rad2Deg * Mathf.Asin(sinAngle);
     }
 
     void initRays() {
 
-        detectionRay = new Vector2[numberRays];
-        float step = 2*angle / numberRays;
-        float alpha = angle;
+        detectionRays = new Vector2[numberRays];
+        float step = 2 * angle / numberRays;
+        float alpha = -angle;
 
         for (int i = 0; i < numberRays; i++)
         {
-            float x = Mathf.Cos(alpha*Mathf.Deg2Rad);
-            float y = Mathf.Sin(alpha*Mathf.Deg2Rad);
+            float x = Mathf.Cos(alpha * Mathf.Deg2Rad); // * scale.magnitude;
+            float y = Mathf.Sin(alpha * Mathf.Deg2Rad); // * scale.magnitude;
             Vector2 direction = new Vector2(x, y);
-            direction.Normalize();
-            detectionRay[i] = direction;
-            Debug.Log(alpha + " deg with Ray " + i + ":" + detectionRay[i]);
-            alpha -= step;
+            detectionRays[i] = direction;
+            alpha += step;
         }
     }
 
@@ -77,7 +60,7 @@ public class SecurityWatchScript : MonoBehaviour {
         {
             GameObject rei = Instantiate(rayRenderer, transform.position, transform.rotation, transform);
             LineRenderer lr = rei.GetComponent<LineRenderer>();
-            lr.SetPosition(0, (Vector2)transform.position + detectionRay[i]);
+            lr.SetPosition(0, (Vector2)transform.position + detectionRays[i]);
             spotLight.Add(lr);
         }
     }
@@ -88,25 +71,24 @@ public class SecurityWatchScript : MonoBehaviour {
         for (int i = 0; i < numberRays; i++)
         {
             // spotLight[i].SetPosition(0, transform.position);
-            Vector2 direction = (Vector2)transform.InverseTransformDirection(detectionRay[i]) 
-                * maxDepth;
-            RaycastHit2D hit = Physics2D.Raycast((Vector2)transform.position, direction, maxDepth, layerMask.value);
-            if (hit.transform != null)
-            {
-                direction = (Vector3)hit.point - transform.position;
+            Vector2 direction = (Vector2) transform.TransformDirection(detectionRays[i]);
+            //direction.Normalize();
+            RaycastHit2D hit = Physics2D.Raycast( transform.position, direction, maxDepth, layerMask.value);
+            if (hit.transform != null) {
+                direction = (Vector3) hit.point - transform.position;
                 Debug.DrawRay(transform.position, direction, Color.red);
-            } else Debug.DrawRay(transform.position, direction*maxDepth, Color.green);
+                detected = true;
+            }
+            else {
+                Debug.DrawRay(transform.position, direction * maxDepth, Color.green);
+            }
+            Debug.DrawRay(transform.position, transform.right);
         }
+        playerDetected = detected;
     }
 
     public bool getDetectionStatus()
     {
         return playerDetected;
     }
-    
-    public void SkipTrigger()
-    {
-
-    }
-
 }
