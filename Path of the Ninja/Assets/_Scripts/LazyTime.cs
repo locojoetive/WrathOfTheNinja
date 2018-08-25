@@ -1,8 +1,10 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 
 public class LazyTime : MonoBehaviour {
+    private int life = 2;
 
     Animator anim;
     Rigidbody2D rb;
@@ -10,11 +12,7 @@ public class LazyTime : MonoBehaviour {
     public bool lazyTime = false, reallyLazy = false;
 
 	// Use this for initialization
-	void Start () {
-        rb = GetComponent<Rigidbody2D>();
-	}
-	
-	// Update is called once per frame
+	void Start () { rb = GetComponent<Rigidbody2D>(); }
 	void Update () {
         lazyTime = Mathf.Abs(rb.velocity.x) < 0.000001f
             && Mathf.Abs(rb.velocity.y) < 0.000001f;
@@ -34,6 +32,14 @@ public class LazyTime : MonoBehaviour {
             //anim.SetBool("lazy", true);
         }
 
-
 	}
+
+    public void InflictDamage()
+    {
+        life--;
+        if (life == 0)
+        {
+            SceneManager.LoadScene(SceneManager.GetActiveScene().name);
+        }
+    }
 }

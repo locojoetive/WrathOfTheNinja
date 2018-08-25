@@ -150,7 +150,7 @@ public class FollowPlayer : MonoBehaviour {
         StreamReader reader = new StreamReader(path);
         string[] lines = reader.ReadToEnd().Split('\n');
 
-        for (int i = 0; i < lines.Length; i++)
+        for (int i = 1; i < lines.Length; i++)
         {
 
             float[] temp = new float[4];

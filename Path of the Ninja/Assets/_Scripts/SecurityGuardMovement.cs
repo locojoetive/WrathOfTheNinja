@@ -11,8 +11,7 @@ public class SecurityGuardMovement : MonoBehaviour {
     private Vector3 scale;
     private bool staying = false;
     private Animator animator;
-
-    private SecurityWatchScript watchScript;
+    private SecurityWatch watchScript;
     private float confirmedAt = 0.0f;
     public float confirmedAfter, runningSpeed;
     public bool cautious = false, playerDetected = false;
@@ -20,8 +19,7 @@ public class SecurityGuardMovement : MonoBehaviour {
     void Start () {
         rb = GetComponent<Rigidbody2D>();
         animator = GetComponent<Animator>();
-        watchScript = GetComponentInChildren<SecurityWatchScript>();
-        
+        watchScript = GetComponentInChildren<SecurityWatch>();
         chill = Time.time + turnFrequency;
         turnAt = chill + stayTime;
         scale = transform.localScale;
@@ -29,12 +27,15 @@ public class SecurityGuardMovement : MonoBehaviour {
 	
 	// Update is called once per frame
 	void Update () {
-        HandleMovement();
-        HandleTurnAround();
-        HandleDetection();
         animator.SetBool("staying", staying);
 
 	}
+    private void FixedUpdate()
+    {
+        HandleDetection();
+        HandleMovement();
+        HandleTurnAround();
+    }
 
     void HandleDetection()
     {
@@ -85,6 +86,5 @@ public class SecurityGuardMovement : MonoBehaviour {
                 chill = turnAt + turnFrequency;
             }
         }
-
     }
 }

@@ -5,13 +5,13 @@ using UnityEngine;
 public class TriggerDoor : MonoBehaviour {
 
     bool open = true;
-    public List<SecurityWatchScript> list;
+    public List<SecurityWatch> list;
     BoxCollider2D col;
 	// Use this for initialization
 	void Start () {
         foreach (GameObject s in GameObject.FindGameObjectsWithTag("security"))
         {
-            list.Add(s.GetComponent<SecurityWatchScript>());
+            list.Add(s.GetComponent<SecurityWatch>());
         }
 
         col = GetComponent<BoxCollider2D>();
@@ -21,7 +21,7 @@ public class TriggerDoor : MonoBehaviour {
 	void Update () {
         bool closeDoor = false;
 
-		foreach(SecurityWatchScript s in list)
+		foreach(SecurityWatch s in list)
         {
             if (s.getDetectionStatus()) closeDoor = true;
         }

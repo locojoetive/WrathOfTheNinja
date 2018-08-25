@@ -18,16 +18,10 @@ public class NinjaMove : MonoBehaviour {
     private bool collisionIgnored = false;
     Collider2D floor;
 
-    public Transform groundCheckFront;
-    public Transform groundCheckBack;
-    public Transform wallCheckUp;
-    public Transform wallCheckDown;
-    public Transform squeezeCheck;
-    public Transform wedgedCheck;
-    public Transform ledgeCheck;
+    public Transform groundCheckFront, groundCheckBack, wallCheckUp, wallCheckDown, 
+        squeezeCheck, wedgedCheck, ledgeCheck;
     private float boxSize = 0.005f;
-
-
+    
     //Movement
     public bool gF = false, gB = false, grounded = false, facingRight = true, jumping = false;
     private int combo = 0;
@@ -44,7 +38,7 @@ public class NinjaMove : MonoBehaviour {
         onLedge = false, wallJumping = false;
 
     //Sliding Attributes
-    private float slidingSpeed = 6F;
+    private float slidingSpeed = 3F;
 
     //walljump
     private float x = 0.0f;
@@ -72,27 +66,25 @@ public class NinjaMove : MonoBehaviour {
         return 0.0f;
     }
 
-    // Use this for initialization
     void Start()
     {
         floor = null;
-        //components for manupilation
         rb = GetComponent<Rigidbody2D>();
         tr = GetComponent<Transform>();
         col = GetComponent<CapsuleCollider2D>();
         anim = GetComponent<Animator>();
         ninjaAttack = GetComponent<NinjaAttacks>();
-        //Time.timeScale = 0.25f;
-        //initialize ground tags & sensors positions
         whatIsGround = 1 << 8;
         whatIsLedge = whatIsGround << 1;
         whatIsClimbableLeft = whatIsLedge << 1;
         whatIsClimbableRight = whatIsClimbableLeft << 1;
         whatIsPermeable = whatIsClimbableRight << 1;
-        /*//initialize consistent player size
-        startScaleX = transform.localScale.x;
-        startScaleY = transform.localScale.y;
-        A = startScaleX * startScaleY;*/
+
+        /* Initialize Consistent Player Size
+         * startScaleX = transform.localScale.x;
+         * startScaleY = transform.localScale.y;
+         * A = startScaleX * startScaleY;
+         */
     }
 
     // Update is called once per frame
@@ -116,21 +108,29 @@ public class NinjaMove : MonoBehaviour {
 
     public void HandleClimbing()
     {
-        if ( onLedge && walledDown && vertical > 0)//((rb.velocity.y < 0.01f && jumping && !walledUp && walledDown))) // || ( climbing || wallGrab )
+        if ( onLedge && walledDown && vertical > 0)
         {
             rb.velocity = Vector2.zero;
             {
                 Debug.Log("On Ledge!");
                 rb.AddForce(Vector2.up * 3.0f, ForceMode2D.Impulse);
             }
+            wallGrab = false;
         }
         else if (climbing)
         {
             rb.velocity = new Vector2(0.0f, climbingSpeed * vertical);
+            wallGrab = true;
         }
-        else if (walled && !grounded && rb.velocity.y < -slidingSpeed)
+        else if (walled && !grounded && rb.velocity.y < 0F)
         {
-            rb.velocity = new Vector2(0.0f, -slidingSpeed);
+            wallGrab = true;
+            rb.velocity = CommitAndGo()?
+                rb.velocity = new Vector2(0.0f, 0.0f) : 
+                new Vector2(0.0f, -slidingSpeed);
+        } else
+        {
+            wallGrab = false;
         }
     }
 
@@ -151,24 +151,25 @@ public class NinjaMove : MonoBehaviour {
         horizontal = Input.GetAxis("Horizontal");
         vertical = Input.GetAxis("Vertical");
 
-        //get active sensors
         gF = Physics2D.OverlapBox(groundCheckFront.position, new Vector2(0.5f * col.size.x - 0.015f, boxSize), 0.0f, whatIsGround | whatIsPermeable);
         gB = Physics2D.OverlapBox(groundCheckBack.position, new Vector2(0.5f * col.size.x - 0.015f, boxSize), 0.0f, whatIsGround | whatIsPermeable);
         grounded = gF && gB && rb.velocity.y < 0.1f;
 
-        //climbing
-        
-
-        //Let's player differ climbing by direction
-        int climbingLayerMask = whatIsGround;
+        int climbingLayerMask = 0;
         if (facingRight)
-            climbingLayerMask = climbingLayerMask | whatIsClimbableLeft;
-        else climbingLayerMask = climbingLayerMask | whatIsClimbableRight;
+            climbingLayerMask = whatIsClimbableLeft;
+        else climbingLayerMask = whatIsClimbableRight;
 
         onLedge = Physics2D.OverlapBox(wallCheckUp.position, Vector2.up * 0.25f * col.size.y + Vector2.right * boxSize, 0.0f, whatIsLedge);
 
-        walledUp = !onLedge && Physics2D.OverlapBox(ledgeCheck.position, Vector2.right*boxSize + Vector2.up * 0.25f * col.size.y, 0.0f, climbingLayerMask);
-        walledDown = Physics2D.OverlapBox(wallCheckDown.position, Vector2.right * boxSize + Vector2.up * 0.25f * col.size.y, 0.0f, climbingLayerMask);
+        walledUp = !onLedge && (
+            Physics2D.OverlapBox(ledgeCheck.position, Vector2.right*boxSize + Vector2.up * 0.25f * col.size.y, 0.0f, whatIsGround) || 
+            Physics2D.OverlapBox(ledgeCheck.position, Vector2.right * boxSize + Vector2.up * 0.25f * col.size.y, 0.0f, climbingLayerMask)
+                && vertical > 0F);
+        Debug.Log(climbingLayerMask);
+        walledDown = Physics2D.OverlapBox(wallCheckDown.position, Vector2.right * boxSize + Vector2.up * 0.25f * col.size.y, 0.0f, whatIsGround) ||
+            Physics2D.OverlapBox(ledgeCheck.position, Vector2.right * boxSize + Vector2.up * 0.25f * col.size.y, 0.0f, climbingLayerMask)
+                && vertical > 0F;
         
         squeezed = Physics2D.OverlapBox(squeezeCheck.position, new Vector2(col.size.x - 0.2f, boxSize), 0.0f, whatIsGround);
         
@@ -204,8 +205,8 @@ public class NinjaMove : MonoBehaviour {
 
 
         //wall behaviour
-        climbing = !onLedge && walled && vertical > 0F;
-        wallGrab = walled && rb.velocity.y <= 0.01f;
+        climbing = !onLedge && walled && vertical > 0.0f;
+        
         //sliding = walled && !grounded && rb.velocity.y < 0.0f && !climbing;
 
         if (collisionIgnored && revertCollisionIgnoreAt < Time.time)
@@ -221,11 +222,7 @@ public class NinjaMove : MonoBehaviour {
     {
         if (controlHorizontal && !walled)
         {
-            //if (Mathf.Abs(rb.velocity.x) < maxSpeed)
-            //rb.AddForce(new Vector2(ducking ? horizontal * walkingSpeed * 0.5f : horizontal * walkingSpeed, rb.velocity.y), ForceMode2D.Force);
-            //else rb.velocity = new Vector2(facingRight? maxSpeed : -maxSpeed, rb.velocity.y);
-            rb.velocity = new Vector2(ducking ? horizontal * walkingSpeed * 0.5f : horizontal * walkingSpeed, rb.velocity.y);
-            
+            rb.velocity = new Vector2(ducking ? horizontal * walkingSpeed * 0.5f : horizontal * walkingSpeed, rb.velocity.y);   
         }
 
         if (slipping)
@@ -448,6 +445,13 @@ public class NinjaMove : MonoBehaviour {
         anim.SetBool("ducking", ducking);
         anim.SetBool("onLedge", onLedge);
         anim.SetFloat("VeloY", rb.velocity.y);
+    }
+
+    private bool CommitAndGo()
+    {
+        if ( facingRight && horizontal > 0.0f || !facingRight && horizontal < 0.0)
+            return true;
+        return false;
     }
 
 

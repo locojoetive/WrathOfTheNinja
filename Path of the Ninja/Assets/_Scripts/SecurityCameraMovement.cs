@@ -3,17 +3,13 @@ using System.Collections.Generic;
 using UnityEngine;
 
 public class SecurityCameraMovement : MonoBehaviour {
-
-    private SecurityWatchScript watchScript;
     public Transform target;
+    private SecurityWatch watchScript;
 
-    public bool rotateDown = true, detectionOn = false;
+    private bool rotateDown = true, detectionOn = false;
     public Vector3 maxRotationDirection, minRotationDirection;
-    public float angle, step;
-
-    public float timeFrameConfirmation=1F, maxSpeed;
+    public float angle, step, timeFrameConfirmation, maxSpeed;
     private float confirmedAt = 0.0f;
-
 
     void Rotate()
     {
@@ -32,15 +28,12 @@ public class SecurityCameraMovement : MonoBehaviour {
             angle = Vector3.Angle(transform.right, maxRotationDirection);
         }
         transform.right = vectorToTarget;
-
-        Debug.Log(angle);
         if (angle <= 1F) rotateDown = !rotateDown;
     }
-
-
+    
     void Start () {
         initMotionSpace();
-        watchScript = GetComponent<SecurityWatchScript>();
+        watchScript = GetComponent<SecurityWatch>();
         target = GameObject.FindGameObjectWithTag("Player").GetComponent<Transform>();
     }
 
