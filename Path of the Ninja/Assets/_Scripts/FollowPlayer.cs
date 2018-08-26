@@ -26,11 +26,9 @@ public class FollowPlayer : MonoBehaviour {
     void Start () {
         bound = new List<Bounds>();
         player = GameObject.FindGameObjectWithTag("Player").transform;
-        
         topRightEdgeVector = Camera.main.ViewportToWorldPoint(new Vector2(1, 1)) - transform.position;
         sceneName = SceneManager.GetActiveScene().name;
         ReadFile();
-
         currentBounds.Add(0);
     }
     
@@ -44,11 +42,7 @@ public class FollowPlayer : MonoBehaviour {
 
         Vector3 position = player.position;
         interpolation = maxSpeed * Time.deltaTime;
-
-
         SetCurrentBounds();
-
-        
 
         float left = Mathf.Infinity;
         float right = Mathf.NegativeInfinity;
