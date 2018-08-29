@@ -19,11 +19,15 @@ public class NinjaStateHandler : MonoBehaviour {
         inputVertical = 0.0f,
         boxSize = 0.025f;
     public bool climbing = false,
+        commitAndGo = false,
         falling = false,
         groundedFront = false,
         groundedBack = false,
         grounded = false,
         goingUp = false,
+        ladderedUp = false,
+        ladderedDown = false,
+        laddered = false,
         ledged = false,
         sliding = false,
         walledUp = false,
@@ -64,14 +68,14 @@ public class NinjaStateHandler : MonoBehaviour {
         animator.SetFloat("horizontal", movement.getHorizontalInput());
         animator.SetBool("sliding", sliding);
         animator.SetFloat("vertical", movement.getVerticalInput());
-        animator.SetBool("walled", walled);
+        animator.SetBool("walled", walled || laddered);
         animator.SetFloat("yVelocity", rb.velocity.y);
 
     }
 
     private void HandleState()
     {
-        whatIsClimbable = (movement.isFacingRight() ? whatIsClimbableRight : whatIsClimbableLeft) | whatIsGround;
+        whatIsClimbable = (movement.isFacingRight() ? whatIsClimbableRight : whatIsClimbableLeft);
         Vector2 wallDetectionSize = new Vector2(boxSize, 0.25f * collider.size.y),
             groundDetectionSize = new Vector2(0.25f * collider.size.x, boxSize);
 
@@ -91,10 +95,22 @@ public class NinjaStateHandler : MonoBehaviour {
             wallCheckUp.position,
             wallDetectionSize,
             0.0f, 
-            whatIsClimbable
+            whatIsGround
         );
         walledDown = Physics2D.OverlapBox(
-            wallCheckDown.position, 
+            wallCheckDown.position,
+            wallDetectionSize,
+            0.0f,
+            whatIsGround
+        );
+        ladderedUp = Physics2D.OverlapBox(
+            wallCheckDown.position,
+            wallDetectionSize,
+            0.0f,
+            whatIsClimbable
+        );
+        ladderedDown = Physics2D.OverlapBox(
+            wallCheckDown.position,
             wallDetectionSize,
             0.0f,
             whatIsClimbable
@@ -108,10 +124,13 @@ public class NinjaStateHandler : MonoBehaviour {
         falling = rb.velocity.y < -0.01;
         goingUp = rb.velocity.y > 0.01;
         wantingUp = movement.getVerticalInput() > 0;
+        commitAndGo = movement.isFacingRight() && movement.getHorizontalInput() > 0
+            || movement.isFacingRight() && movement.getHorizontalInput() > 0;
         grounded = groundedFront && groundedBack;
-        walled = walledUp && walledDown && !grounded && (wantingUp);
-        climbing = walled && wantingUp;
-        sliding = walled && falling;
+        walled = walledUp && walledDown && !grounded;
+        laddered = ladderedUp && ladderedDown && (wantingUp || laddered);
+        climbing = (walled || laddered) && wantingUp;
+        sliding = (walled || laddered) && falling;
         DrawBox(groundCheckFront.position, groundDetectionSize, Color.blue);
         DrawBox(groundCheckBack.position, groundDetectionSize, Color.cyan);
         DrawBox(wallCheckUp.position, wallDetectionSize, Color.green);
@@ -154,12 +173,17 @@ public class NinjaStateHandler : MonoBehaviour {
 
     public bool isWayBlocked()
     {
-        return walledDown || walledUp;
+        return walledDown || walledUp || laddered;
     }
 
     public bool isClimbing()
     {
         return climbing;
+    }
+
+    public bool isWallGrabbing()
+    {
+        return commitAndGo && (walled || laddered) && !climbing;
     }
 
     private void positionSensors()

@@ -32,9 +32,13 @@ public class NinjaMove : MonoBehaviour {
         getComponents();
     }
 
-    private void FixedUpdate()
+    private void Update()
     {
         HandleInput();
+    }
+
+    private void FixedUpdate()
+    {
         HandleFacing();
         HandleMovement();
         HandleJump();
@@ -70,6 +74,9 @@ public class NinjaMove : MonoBehaviour {
         if (stateHandler.isGrounded() && jump)
         {
             rb.AddForce(new Vector2(rb.velocity.x, jumpHeight), ForceMode2D.Impulse);
+        } else if(stateHandler.isWalled() && jump)
+        {
+            rb.AddForce(new Vector2(jumpHeight, jumpHeight), ForceMode2D.Impulse);
         }
 
         if (rb.velocity.y < 0)
@@ -87,6 +94,10 @@ public class NinjaMove : MonoBehaviour {
         if(stateHandler.isClimbing())
         {
             rb.velocity = Vector2.up * climbingSpeed;
+        }
+        if (stateHandler.isWallGrabbing())
+        {
+            rb.velocity = Vector2.zero;
         }
     }
     
