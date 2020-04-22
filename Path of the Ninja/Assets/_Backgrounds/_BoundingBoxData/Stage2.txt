@@ -1,2 +1,0 @@
-left,bottom,right,top
-16.00,00.00,16.00,00.00
